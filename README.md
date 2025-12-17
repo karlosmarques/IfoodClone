@@ -61,7 +61,7 @@ Este projeto foi criado como parte do meu aprendizado acadêmico em **Análise e
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/karlosmarques/NOME-DO-REPOSITORIO.git
+git clone https://github.com/karlosmarques/IfoodClone
 ```
 
 2. Acesse a pasta do backend
@@ -108,8 +108,20 @@ npx expo start
 
 ---
 
-## 👨‍💻 Autor
+## 👥 Contribuidores
 
-**Karlos Marques de Menezes**
-Estudante de Análise e Desenvolvimento de Sistemas
-GitHub: [https://github.com/karlosmarques](https://github.com/karlosmarques)
+- **Karlos Marques de Menezes** — Backend e Banco de Dados  
+  GitHub: https://github.com/karlosmarques  
+
+- **Dafni Milla** — Desenvolvimento Mobile (React Native)  
+  GitHub: https://github.com/DafniMilla  
+
+- **Brenda** — Desenvolvimento Frontend Web (React)  
+  GitHub: https://github.com/Brendaa501  
+
+- **Bela Dys** — Frontend Web e Banco de Dados  
+  GitHub: https://github.com/beladays  
+
+- **Giuliana** — Desenvolvimento Backend  
+  GitHub: https://github.com/Giuliana-05  
+
