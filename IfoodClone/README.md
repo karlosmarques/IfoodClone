@@ -113,3 +113,8 @@ npx expo start
 **Karlos Marques de Menezes**
 Estudante de Análise e Desenvolvimento de Sistemas
 GitHub: [https://github.com/karlosmarques](https://github.com/karlosmarques)
+GitHub: [https://github.com/DafniMilla](https://github.com/DafniMilla)
+GitHub: [https://github.com/Brendaa501](https://github.com/Brendaa501)
+GitHub: [https://github.com/beladays](https://github.com/beladays)
+GitHub: [https://github.com/Giuliana-05](https://github.com/Giuliana-05)
+
