@@ -61,7 +61,7 @@ Este projeto foi criado como parte do meu aprendizado acadêmico em **Análise e
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/karlosmarques/NOME-DO-REPOSITORIO.git
+git clone https://github.com/karlosmarques/IfoodClone
 ```
 
 2. Acesse a pasta do backend
