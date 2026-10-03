@@ -1,92 +1,86 @@
+import axios from "axios";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "../styles/painel.css";
+import { API_URL, authHeaders } from "../componentes/painel";
+
+const MENU = [
+  { to: "/telaprincipal", icon: "bi-receipt", label: "Pedidos" },
+  { to: "/vendas", icon: "bi-graph-up-arrow", label: "Vendas" },
+  { to: "/produtos/cardapio", icon: "bi-journal-text", label: "Cardápio" },
+  { to: "/produtos/novo", icon: "bi-plus-square", label: "Cadastrar produto" },
+  { to: "/perfil", icon: "bi-shop", label: "Perfil da loja" },
+];
 
 export default function LayoutRestaurante() {
+  const [restaurante, setRestaurante] = useState(null);
+
+  useEffect(() => {
+    axios
+      .get(`${API_URL}/restaurante`, { headers: authHeaders() })
+      .then((res) => setRestaurante(res.data?.[0] || null))
+      .catch(() => setRestaurante(null));
+  }, []);
+
+  const logout = () => {
+    if (!window.confirm("Deseja sair da sua conta?")) return;
+    localStorage.clear();
+    window.location.href = "/";
+  };
+
   return (
-    <div className="d-flex" style={{ minHeight: "100vh" }}>
-      
+    <div className="pn-app">
       {/* MENU LATERAL */}
-      <aside
-        className="text-white p-4 d-flex flex-column"
-        style={{
-          width: "260px",
-          background: "linear-gradient(180deg, #ea1d2c, #b91521)",
-        }}
-      >
-        <h3 className="fw-bold text-center mb-5">iFood 2.0</h3>
+      <aside className="pn-sidebar">
+        <div className="pn-brand">
+          iFood <small>Parceiros</small>
+        </div>
 
-        <NavLink
-          to="/telaprincipal"
-          className={({ isActive }) =>
-            `menu-link mb-3 ${isActive ? "menu-active" : ""}`
-          }
-        >
-          Histórico de Pedidos
-        </NavLink>
+        <div className="pn-store">
+          {restaurante?.urlImagem ? (
+            <img src={`${API_URL}${restaurante.urlImagem}`} alt="" />
+          ) : (
+            <div className="pn-store-placeholder">
+              <i className="bi bi-shop" />
+            </div>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <div className="pn-store-name">
+              {restaurante?.nome || "Minha loja"}
+            </div>
+            <div className="pn-store-status">Loja aberta</div>
+          </div>
+        </div>
 
+        <div className="pn-nav-label">Menu</div>
+        <nav className="pn-nav">
+          {MENU.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) => `pn-link ${isActive ? "active" : ""}`}
+            >
+              <i className={`bi ${item.icon}`} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
 
-        <NavLink
-          to="/produtos/novo"
-          className={({ isActive }) =>
-            `menu-link mb-3 ${isActive ? "menu-active" : ""}`
-          }
-        >
-          Cadastrar Produtos
-        </NavLink>
-
-        <NavLink
-          to="/produtos/cardapio"
-          className={({ isActive }) =>
-            `menu-link mb-3 ${isActive ? "menu-active" : ""}`
-          }
-        >
-          Cardápio
-        </NavLink>
-<NavLink
-          to="/vendas"
-          className={({ isActive }) =>
-            `menu-link mb-3 ${isActive ? "menu-active" : ""}`
-          }
-        >
-          Vendas
-        </NavLink>
-        <NavLink
-          to="/perfil"
-          className={({ isActive }) =>
-            `menu-link mb-3 ${isActive ? "menu-active" : ""}`
-          }
-        >
-          Perfil 
-        </NavLink>
+        <div className="pn-sidebar-footer">
+          <button className="pn-link pn-logout" onClick={logout}>
+            <i className="bi bi-box-arrow-right" />
+            <span>Sair</span>
+          </button>
+        </div>
       </aside>
 
       {/* CONTEÚDO DAS TELAS */}
-      <main className="flex-grow-1 p-4 bg-light">
-        <Outlet />
+      <main className="pn-main">
+        <div className="pn-page">
+          <Outlet />
+        </div>
       </main>
-
-      {/* ESTILOS */}
-      <style>{`
-        .menu-link {
-          text-decoration: none;
-          padding: 12px 16px;
-          border-radius: 12px;
-          background: rgba(255,255,255,0.15);
-          color: white;
-          font-weight: 500;
-          transition: all 0.3s ease;
-        }
-
-        .menu-link:hover {
-          background: rgba(255,255,255,0.3);
-          transform: translateX(5px);
-        }
-
-        .menu-active {
-          background: white;
-          color: #ea1d2c;
-          font-weight: bold;
-        }
-      `}</style>
     </div>
   );
 }

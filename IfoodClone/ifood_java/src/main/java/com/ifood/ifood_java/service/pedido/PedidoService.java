@@ -53,7 +53,20 @@ public class PedidoService {
         pedido.setCliente(cliente);
         pedido.setRestaurante(restaurante);
         pedido.setDataCriacao(LocalDateTime.now());
-        pedido.setStatus("REALIZADO");
+
+        String metodo = request.getMetodoPagamento() != null
+                ? request.getMetodoPagamento().toUpperCase()
+                : "DINHEIRO";
+        pedido.setMetodoPagamento(metodo);
+
+        if ("DINHEIRO".equals(metodo)) {
+            pedido.setStatus("REALIZADO");
+            pedido.setPagamentoStatus("PAGAR_NA_ENTREGA");
+        } else {
+            // PIX/CARTAO: só vira REALIZADO quando o Mercado Pago aprovar
+            pedido.setStatus("AGUARDANDO_PAGAMENTO");
+            pedido.setPagamentoStatus("PENDENTE");
+        }
 
         List<PedidoItem> itensEntities = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
@@ -92,6 +105,8 @@ public class PedidoService {
         resp.setId(pedido.getId());
         resp.setValorTotal(pedido.getValorTotal());
         resp.setStatus(pedido.getStatus());
+        resp.setMetodoPagamento(pedido.getMetodoPagamento());
+        resp.setPagamentoStatus(pedido.getPagamentoStatus());
 
         List<PedidoResponse.ItemResponse> itens = new ArrayList<>();
 

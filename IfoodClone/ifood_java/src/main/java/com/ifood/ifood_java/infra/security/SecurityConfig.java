@@ -42,6 +42,7 @@ public class SecurityConfig {
                     .requestMatchers("/pedidos/**").permitAll()
                     .requestMatchers("/uploads/**").permitAll()
                     .requestMatchers("/endereco/**").permitAll()
+                    .requestMatchers("/pagamentos/webhook").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -54,7 +55,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(List.of("http://localhost:8082","http://localhost:3000")); 
+        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*", "http://192.168.*:*")); 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
 

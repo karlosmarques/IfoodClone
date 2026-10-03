@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -10,18 +11,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSacola } from "../../context/SacolaContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { cores, formatarPreco, imagemUrl, sombra } from "../../constants/ui";
+import { useAdicionarNaSacola, useSacola } from "../../context/SacolaContext";
 import { API_BASE_URL } from "../config";
 
 export default function DetalheProduto() {
-  const { id } = useLocalSearchParams();
+  const { id, restaurante } = useLocalSearchParams<{ id: string; restaurante?: string }>();
   const router = useRouter();
 
   const [produto, setProduto] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantidade, setQuantidade] = useState(1);
 
-  const { adicionar } = useSacola();
+  const { idRestaurante } = useSacola();
+  const adicionar = useAdicionarNaSacola();
+
+  // A loja vem pela rota; sem ela, usa a loja da sacola
+  const restauranteId = Number(restaurante) || idRestaurante;
 
   const preco = produto ? Number(produto.preco) : 0;
   const valorTotal = preco * quantidade;
@@ -49,10 +56,16 @@ export default function DetalheProduto() {
     setQuantidade((q) => q + 1);
   }
 
+  function adicionarNaSacola() {
+    if (!restauranteId) return;
+    const ok = adicionar({ ...produto, idRestaurante: restauranteId }, restauranteId, quantidade);
+    if (ok) router.back();
+  }
+
   if (loading) {
     return (
       <View style={styles.centralizado}>
-        <ActivityIndicator size="large" color="#EA1D2C" />
+        <ActivityIndicator size="large" color={cores.vermelho} />
       </View>
     );
   }
@@ -60,131 +73,144 @@ export default function DetalheProduto() {
   if (!produto) {
     return (
       <View style={styles.centralizado}>
+        <Ionicons name="sad-outline" size={44} color="#C8C8CF" />
         <Text style={styles.erroTexto}>Produto não encontrado.</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.link}>Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  const img = imagemUrl(produto.urlImagem);
+
   return (
     <View style={styles.container}>
-      {/* ===== HEADER FIXO ===== */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.voltarIcone}>←</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitulo}>Detalhes</Text>
-
-        <View style={{ width: 32 }} />
-      </View>
-
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 56 }}
-      >
-        <Image
-          source={{
-            uri: produto.urlImagem
-              ? `${API_BASE_URL}${produto.urlImagem.replace(/\\/g, "/")}`
-              : "https://via.placeholder.com/400x300",
-          }}
-          style={styles.produtoImagem}
-        />
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={styles.imagemBox}>
+          {img ? (
+            <Image source={{ uri: img }} style={styles.produtoImagem} />
+          ) : (
+            <View style={[styles.produtoImagem, styles.semImagem]}>
+              <Ionicons name="image-outline" size={48} color={cores.textoSuave} />
+            </View>
+          )}
+          <SafeAreaView edges={["top"]} style={styles.topoBotoes}>
+            <TouchableOpacity style={styles.botaoRedondo} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={22} color={cores.texto} />
+            </TouchableOpacity>
+          </SafeAreaView>
+        </View>
 
         <View style={styles.content}>
+          {produto.categoria?.nome && (
+            <Text style={styles.categoria}>{produto.categoria.nome}</Text>
+          )}
           <Text style={styles.nome}>{produto.nome}</Text>
           <Text style={styles.descricao}>{produto.descricao}</Text>
-          <Text style={styles.preco}>R$ {preco.toFixed(2)}</Text>
+          <Text style={styles.preco}>{formatarPreco(preco)}</Text>
         </View>
       </ScrollView>
 
+      {/* RODAPÉ: quantidade + adicionar */}
+      <SafeAreaView edges={["bottom"]} style={styles.footer}>
+        <View style={styles.stepper}>
+          <TouchableOpacity
+            onPress={diminuir}
+            disabled={quantidade === 1}
+            style={styles.stepperBotao}
+          >
+            <Ionicons
+              name="remove"
+              size={20}
+              color={quantidade === 1 ? "#C8C8CF" : cores.vermelho}
+            />
+          </TouchableOpacity>
+          <Text style={styles.qtdNumero}>{quantidade}</Text>
+          <TouchableOpacity onPress={aumentar} style={styles.stepperBotao}>
+            <Ionicons name="add" size={20} color={cores.vermelho} />
+          </TouchableOpacity>
         </View>
 
-  
-     
-    
+        <TouchableOpacity
+          style={[styles.botaoAdd, !restauranteId && { opacity: 0.5 }]}
+          onPress={adicionarNaSacola}
+          disabled={!restauranteId}
+        >
+          <Text style={styles.botaoTexto}>Adicionar</Text>
+          <Text style={styles.botaoTexto}>{formatarPreco(valorTotal)}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
 /* ================= STYLES ================= */
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: cores.superficie },
 
-  /* HEADER */
-  header: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 56,
+  imagemBox: { position: "relative" },
+  produtoImagem: { width: "100%", height: 300, backgroundColor: cores.fundo },
+  semImagem: { alignItems: "center", justifyContent: "center" },
+  topoBotoes: { position: "absolute", top: 0, left: 16, paddingTop: 8 },
+  botaoRedondo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#fff",
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    zIndex: 10,
-    elevation: 6,
+    justifyContent: "center",
+    ...sombra,
   },
 
-  voltarIcone: {
-    fontSize: 28,
-    color: "#333",
-  },
-
-  headerTitulo: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#333",
-  },
-
-  /* CONTENT */
-  produtoImagem: { width: "100%", height: 260, backgroundColor: "#eee" },
   content: { padding: 20 },
-
-  nome: { fontSize: 24, fontWeight: "700", marginBottom: 10 },
-  descricao: { fontSize: 16, color: "#555", marginBottom: 20 },
-  preco: { fontSize: 22, fontWeight: "700", color: "#EA1D2C" },
+  categoria: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: cores.textoSuave,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  nome: { fontSize: 24, fontWeight: "800", color: cores.texto, marginBottom: 10 },
+  descricao: { fontSize: 15, color: cores.textoSuave, lineHeight: 22, marginBottom: 16 },
+  preco: { fontSize: 22, fontWeight: "800", color: cores.texto },
 
   /* FOOTER */
   footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    backgroundColor: "#fff",
-  },
-
-  quantidadeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    borderTopColor: cores.borda,
+    backgroundColor: cores.superficie,
   },
-
-  qtdBotao: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#EA1D2C",
-    alignItems: "center",
-    justifyContent: "center",
+    borderColor: cores.borda,
+    borderRadius: 14,
+    height: 52,
   },
-
-  qtdBotaoDisabled: { opacity: 0.4 },
-  qtdTexto: { fontSize: 22, color: "#EA1D2C", fontWeight: "600" },
-  qtdNumero: { marginHorizontal: 16, fontSize: 18, fontWeight: "600" },
-
+  stepperBotao: { width: 44, height: "100%", alignItems: "center", justifyContent: "center" },
+  qtdNumero: { fontSize: 17, fontWeight: "700", minWidth: 24, textAlign: "center" },
   botaoAdd: {
-    backgroundColor: "#EA1D2C",
-    paddingVertical: 14,
-    borderRadius: 8,
+    flex: 1,
+    height: 52,
+    backgroundColor: cores.vermelho,
+    borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
   },
+  botaoTexto: { color: "#fff", fontSize: 16, fontWeight: "700" },
 
-  botaoTexto: { color: "#fff", fontSize: 18, fontWeight: "600" },
-
-  centralizado: { flex: 1, justifyContent: "center", alignItems: "center" },
-  erroTexto: { fontSize: 18, color: "#666" },
+  centralizado: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10 },
+  erroTexto: { fontSize: 17, color: cores.textoSuave },
+  link: { color: cores.vermelho, fontWeight: "700", fontSize: 16 },
 });

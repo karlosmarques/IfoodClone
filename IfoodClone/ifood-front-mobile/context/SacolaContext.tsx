@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert, Platform } from "react-native";
 import React, {
   createContext,
   useContext,
@@ -29,6 +30,7 @@ type SacolaContextType = {
   ) => void;
   remover: (idProduto: number) => void;
   limpar: () => void;
+  substituir: (produto: Produto, idRestaurante: number, qtd?: number) => void;
   total: number;
   montarPayload: () =>
     | {
@@ -126,6 +128,12 @@ export function SacolaProvider({
     setIdRestaurante(null);
   }
 
+  // Troca todo o conteúdo da sacola por um item de outra loja
+  function substituir(produto: Produto, restauranteId: number, qtd = 1) {
+    setItens([{ produto, quantidade: qtd }]);
+    setIdRestaurante(restauranteId);
+  }
+
   const total = itens.reduce(
     (acc, i) => acc + i.produto.preco * i.quantidade,
     0
@@ -151,6 +159,7 @@ export function SacolaProvider({
         adicionar,
         remover,
         limpar,
+        substituir,
         total,
         montarPayload,
       }}
@@ -162,3 +171,44 @@ export function SacolaProvider({
 
 /* ================== HOOK ================== */
 export const useSacola = () => useContext(SacolaContext);
+
+/* Adiciona à sacola avisando quando ela já tem itens de outra loja */
+export function useAdicionarNaSacola() {
+  const { adicionar, substituir, idRestaurante, itens } = useSacola();
+
+  return (produto: Produto, restauranteId: number, qtd = 1) => {
+    if (idRestaurante && idRestaurante !== restauranteId) {
+      // Sacola vazia mas ainda "presa" à loja anterior: só troca
+      if (itens.length === 0) {
+        substituir(produto, restauranteId, qtd);
+        return true;
+      }
+
+      const titulo = "Sacola de outra loja";
+      const msg =
+        "Sua sacola tem itens de outro restaurante. Deseja limpar a sacola e adicionar este item?";
+
+      if (Platform.OS === "web") {
+        // Alert com botões não funciona no navegador
+        if (window.confirm(`${titulo}\n\n${msg}`)) {
+          substituir(produto, restauranteId, qtd);
+          return true;
+        }
+        return false;
+      }
+
+      Alert.alert(titulo, msg, [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Limpar e adicionar",
+          style: "destructive",
+          onPress: () => substituir(produto, restauranteId, qtd),
+        },
+      ]);
+      return false;
+    }
+
+    adicionar(produto, restauranteId, qtd);
+    return true;
+  };
+}

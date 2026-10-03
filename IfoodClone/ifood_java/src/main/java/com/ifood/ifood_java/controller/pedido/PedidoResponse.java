@@ -10,6 +10,8 @@ public class PedidoResponse {
     private Long id;
     private BigDecimal valorTotal;
     private String status;
+    private String metodoPagamento;
+    private String pagamentoStatus;
     private List<ItemResponse> itens;
 
     @Data

@@ -1,16 +1,17 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Card, Container, Row, Col, Button, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
+import { API_URL, authHeaders } from "../../componentes/painel";
 
 export default function PerfilRestaurante() {
   const [restaurante, setRestaurante] = useState(null);
   const [usuario, setUsuario] = useState(null);
-  const [editando, setEditando] = useState(false);
+  const [editandoLoja, setEditandoLoja] = useState(false);
+  const [editandoDono, setEditandoDono] = useState(false);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
-  const[id, setId] = useState("");
+  const [id, setId] = useState("");
 
-  const token = localStorage.getItem("token");
   /* ================= LOGOUT ================= */
   const logout = () => {
     if (!window.confirm("Deseja sair da sua conta?")) return;
@@ -23,9 +24,7 @@ export default function PerfilRestaurante() {
     if (!window.confirm("Tem certeza que deseja excluir o restaurante?")) return;
 
     try {
-      await axios.delete(`http://localhost:8081/restaurante/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(`${API_URL}/restaurante/${id}`, { headers: authHeaders() });
 
       alert("Perfil excluído com sucesso!");
       localStorage.clear();
@@ -38,14 +37,12 @@ export default function PerfilRestaurante() {
   /* ================= SALVAR RESTAURANTE ================= */
   const salvarEdicaoRestaurante = async () => {
     try {
-      await axios.put(
-        "http://localhost:8081/restaurante/editar",
-        restaurante,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.put(`${API_URL}/restaurante/editar`, restaurante, {
+        headers: authHeaders(),
+      });
 
       alert("Restaurante atualizado com sucesso!");
-      setEditando(false);
+      setEditandoLoja(false);
     } catch {
       alert("Erro ao salvar restaurante.");
     }
@@ -54,14 +51,12 @@ export default function PerfilRestaurante() {
   /* ================= SALVAR PERFIL ================= */
   const salvarEdicaoPerfil = async () => {
     try {
-      await axios.put(
-        "http://localhost:8081/perfil/editar",
-        usuario,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.put(`${API_URL}/perfil/editar`, usuario, {
+        headers: authHeaders(),
+      });
 
       alert("Perfil atualizado com sucesso!");
-      setEditando(false);
+      setEditandoDono(false);
     } catch {
       alert("Erro ao salvar perfil.");
     }
@@ -69,16 +64,12 @@ export default function PerfilRestaurante() {
 
   /* ================= CARREGAR DADOS ================= */
   const carregarDados = async () => {
-
     try {
-
-      const response = await axios.get("http://localhost:8081/restaurante", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await axios.get(`${API_URL}/restaurante`, {
+        headers: authHeaders(),
       });
-      
-      const id =response.data[0].idRestaurante
-      setId(id);
 
+      setId(response.data[0].idRestaurante);
       setRestaurante(response.data[0]);
       setUsuario(response.data[0].usuario);
     } catch {
@@ -94,199 +85,192 @@ export default function PerfilRestaurante() {
 
   if (loading)
     return (
-      <div className="d-flex justify-content-center mt-5">
+      <div className="pn-loading">
         <Spinner animation="border" variant="danger" />
       </div>
     );
 
-  if (erro) return <p className="text-center text-danger">{erro}</p>;
-  if (!restaurante || !usuario)
-    return <p className="text-center">Nenhum dado encontrado.</p>;
+  if (erro)
+    return (
+      <div className="pn-alert error">
+        <i className="bi bi-exclamation-circle" /> {erro}
+      </div>
+    );
 
-  const imagemUrl = `http://localhost:8081${restaurante.urlImagem}`;
+  if (!restaurante || !usuario)
+    return (
+      <div className="pn-card pn-empty">
+        <i className="bi bi-shop" />
+        <h5>Nenhum dado encontrado</h5>
+      </div>
+    );
+
+  const end = restaurante.endereco;
 
   return (
-    <Container className="mt-5">
-      <Row className="justify-content-center">
-        <Col md={8}>
-          <Card className="shadow-lg p-4 rounded-4 border-0">
-            <h2 className="text-center fw-bold text-danger mb-4">
-              Perfil do Restaurante
-            </h2>
-
-            {/* IMAGEM */}
-            <div className="text-center mb-4">
-              <img
-                src={imagemUrl}
-                alt="Restaurante"
-                style={{
-                  width: 180,
-                  height: 180,
-                  objectFit: "cover",
-                  borderRadius: "50%",
-                  border: "4px solid #dc3545",
-                }}
-              />
-            </div>
-
-            {/* ================= RESTAURANTE ================= */}
-            <Card className="p-3 mb-4 border-0 shadow-sm">
-              <div className="d-flex justify-content-end mb-2">
-                {!editando && (
-                  <i
-                    className="bi bi-pencil fs-2 text-warning me-3"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setEditando(true)}
-                  />
-                )}
-                <i
-                  className="bi bi-trash-fill fs-2 text-danger"
-                  style={{ cursor: "pointer" }}
-                  onClick={excluirPerfil}
-                />
-              </div>
-
-              <h4 className="text-danger mb-3">
-                Informações do Restaurante
-              </h4>
-
-              <Campo
-                label="Nome"
-                valor={restaurante.nome}
-                editando={editando}
-                onChange={(v) =>
-                  setRestaurante({ ...restaurante, nome: v })
-                }
-              />
-
-              <Campo
-                label="CNPJ"
-                valor={restaurante.cnpj}
-                editando={editando}
-                onChange={(v) =>
-                  setRestaurante({ ...restaurante, cnpj: v })
-                }
-              />
-
-              <Campo
-                label="Telefone"
-                valor={restaurante.telefone}
-                editando={editando}
-                onChange={(v) =>
-                  setRestaurante({ ...restaurante, telefone: v })
-                }
-              />
-
-              <Campo
-                label="Raio de entrega (km)"
-                type="number"
-                valor={restaurante.raio_entrega}
-                editando={editando}
-                onChange={(v) =>
-                  setRestaurante({ ...restaurante, raio_entrega: v })
-                }
-              />
-
-              {editando && (
-                <Button
-                  className="w-100 mt-3"
-                  variant="success"
-                  onClick={salvarEdicaoRestaurante}
-                >
-                  Salvar alterações
-                </Button>
+    <>
+      {/* CAPA */}
+      <div className="pn-card mb-4">
+        <div className="pn-cover" />
+        <div className="pn-profile-head">
+          <img src={`${API_URL}${restaurante.urlImagem}`} alt="Restaurante" />
+          <div className="pb-1">
+            <h2>{restaurante.nome}</h2>
+            <div className="d-flex gap-2 flex-wrap mt-1">
+              {restaurante.categoria?.nome && (
+                <span className="pn-badge plain pn-tone-red">
+                  {restaurante.categoria.nome}
+                </span>
               )}
-            </Card>
-
-            {/* ================= DONO ================= */}
-            <Card className="p-3 mb-3 border-0 shadow-sm">
-
-              <div className="d-flex justify-content-end mb-2">
-                {!editando && (
-                  <i
-                    className="bi bi-pencil fs-2 text-warning me-3"
-                    style={{ cursor: "pointer" }}
-                    onClick={() => setEditando(true)}
-                  />
-                )}
-                <i
-                  className="bi bi-trash-fill fs-2 text-danger"
-                  style={{ cursor: "pointer" }}
-                  onClick={excluirPerfil}
-                />
-              </div>
-              <h4 className="text-danger mb-3">Dono do Restaurante</h4>
-
-              <Campo
-                label="Nome"
-                valor={usuario.nome}
-                editando={editando}
-                onChange={(v) =>
-                  setUsuario({ ...usuario, nome: v })
-                }
-              />
-
-              <Campo
-                label="Email"
-                valor={usuario.email}
-                editando={editando}
-                onChange={(v) =>
-                  setUsuario({ ...usuario, email: v })
-                }
-              />
-
-              <Campo
-                label="CPF"
-                valor={usuario.cpf}
-                editando={editando}
-                onChange={(v) =>
-                  setUsuario({ ...usuario, cpf: v })
-                }
-              />
-
-              <Campo
-                label="Telefone"
-                valor={usuario.foneCelular}
-                editando={editando}
-                onChange={(v) =>
-                  setUsuario({ ...usuario, foneCelular: v })
-                }
-              />
-
-              {editando && (
-                <Button
-                  className="w-100 mt-3"
-                  variant="success"
-                  onClick={salvarEdicaoPerfil}
-                >
-                  Salvar alterações
-                </Button>
+              {restaurante.raio_entrega && (
+                <span className="pn-badge plain pn-tone-gray">
+                  <i className="bi bi-geo-alt" /> Entrega até {restaurante.raio_entrega} km
+                </span>
               )}
-            </Card>
-
-            {/* LOGOUT */}
-            <div
-              className="d-flex justify-content-end align-items-center text-danger"
-              style={{ cursor: "pointer" }}
-              onClick={logout}
-            >
-              <i className="bi bi-box-arrow-right fs-4 me-2"></i>
-              <span className="fw-semibold">Sair</span>
             </div>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= RESTAURANTE ================= */}
+      <Secao
+        titulo="Informações da loja"
+        icone="bi-shop"
+        editando={editandoLoja}
+        onEditar={() => setEditandoLoja(true)}
+        onCancelar={() => {
+          setEditandoLoja(false);
+          carregarDados();
+        }}
+        onSalvar={salvarEdicaoRestaurante}
+      >
+        <Campo
+          label="Nome"
+          valor={restaurante.nome}
+          editando={editandoLoja}
+          onChange={(v) => setRestaurante({ ...restaurante, nome: v })}
+        />
+        <Campo
+          label="CNPJ"
+          valor={restaurante.cnpj}
+          editando={editandoLoja}
+          onChange={(v) => setRestaurante({ ...restaurante, cnpj: v })}
+        />
+        <Campo
+          label="Telefone"
+          valor={restaurante.telefone}
+          editando={editandoLoja}
+          onChange={(v) => setRestaurante({ ...restaurante, telefone: v })}
+        />
+        <Campo
+          label="Raio de entrega (km)"
+          type="number"
+          valor={restaurante.raio_entrega}
+          editando={editandoLoja}
+          onChange={(v) => setRestaurante({ ...restaurante, raio_entrega: v })}
+        />
+        {end && (
+          <Campo
+            label="Endereço"
+            valor={`${end.rua}, ${end.numero} - ${end.bairro}, ${end.cidade}/${end.estado}`}
+          />
+        )}
+      </Secao>
+
+      {/* ================= DONO ================= */}
+      <Secao
+        titulo="Responsável"
+        icone="bi-person"
+        editando={editandoDono}
+        onEditar={() => setEditandoDono(true)}
+        onCancelar={() => {
+          setEditandoDono(false);
+          carregarDados();
+        }}
+        onSalvar={salvarEdicaoPerfil}
+      >
+        <Campo
+          label="Nome"
+          valor={usuario.nome}
+          editando={editandoDono}
+          onChange={(v) => setUsuario({ ...usuario, nome: v })}
+        />
+        <Campo
+          label="E-mail"
+          valor={usuario.email}
+          editando={editandoDono}
+          onChange={(v) => setUsuario({ ...usuario, email: v })}
+        />
+        <Campo
+          label="CPF"
+          valor={usuario.cpf}
+          editando={editandoDono}
+          onChange={(v) => setUsuario({ ...usuario, cpf: v })}
+        />
+        <Campo
+          label="Telefone"
+          valor={usuario.foneCelular}
+          editando={editandoDono}
+          onChange={(v) => setUsuario({ ...usuario, foneCelular: v })}
+        />
+      </Secao>
+
+      {/* ================= CONTA ================= */}
+      <div className="pn-card pn-card-pad pn-danger-zone d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h6 className="pn-section-title mb-1">Conta</h6>
+          <p className="text-muted small mb-0">
+            Excluir a loja remove o cardápio e o histórico permanentemente.
+          </p>
+        </div>
+        <div className="d-flex gap-2">
+          <button className="pn-btn pn-btn-ghost" onClick={logout}>
+            <i className="bi bi-box-arrow-right" /> Sair
+          </button>
+          <button className="pn-btn pn-btn-danger-ghost" onClick={excluirPerfil}>
+            <i className="bi bi-trash3" /> Excluir loja
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ================= SEÇÃO EDITÁVEL ================= */
+function Secao({ titulo, icone, editando, onEditar, onCancelar, onSalvar, children }) {
+  return (
+    <div className="pn-card pn-card-pad mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h6 className="pn-section-title mb-0">
+          <i className={`bi ${icone}`} /> {titulo}
+        </h6>
+        {editando ? (
+          <div className="d-flex gap-2">
+            <button className="pn-btn pn-btn-ghost" onClick={onCancelar}>
+              Cancelar
+            </button>
+            <button className="pn-btn pn-btn-primary" onClick={onSalvar}>
+              Salvar
+            </button>
+          </div>
+        ) : (
+          <button className="pn-btn pn-btn-ghost" onClick={onEditar}>
+            <i className="bi bi-pencil" /> Editar
+          </button>
+        )}
+      </div>
+      <div className="pn-fields">{children}</div>
+    </div>
   );
 }
 
 /* ================= COMPONENTE CAMPO ================= */
 function Campo({ label, valor, editando = false, onChange, type = "text" }) {
   return (
-    <div className="mb-2">
-      <strong>{label}</strong>
-      {!editando ? (
-        <div>{valor}</div>
+    <div>
+      <label className="pn-label">{label}</label>
+      {!editando || !onChange ? (
+        <div className="pn-field-value">{valor || "—"}</div>
       ) : (
         <input
           className="form-control"

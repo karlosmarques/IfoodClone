@@ -1,17 +1,22 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { SearchBar } from '@rneui/themed';
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Dimensions,
+  ActivityIndicator,
   FlatList,
-  ImageBackground,
+  Image,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { cores, imagemUrl, sombra } from '@/constants/ui';
 import { API_BASE_URL } from '../config';
 
 /* =======================
@@ -21,6 +26,7 @@ type Restaurante = {
   idRestaurante: number;
   nome: string;
   urlImagem: string;
+  raio_entrega?: string;
   categoria: {
     id: number;
     nome: string;
@@ -38,12 +44,10 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 ======================= */
 export default function Busca() {
   const navigation = useNavigation<NavigationProp>();
-
   const [search, setSearch] = useState('');
+  const [categoria, setCategoria] = useState<string | null>(null);
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const updateSearch = (text: string) => setSearch(text);
 
   /* =======================
      BUSCAR RESTAURANTES
@@ -51,24 +55,10 @@ export default function Busca() {
   useEffect(() => {
     async function fetchRestaurantes() {
       try {
-        const response = await axios.get<any[]>(
-          `${API_BASE_URL}/categorias/restaurantes`
+        const response = await axios.get<Restaurante[]>(
+          `${API_BASE_URL}/restaurante/mobile`
         );
-
-        const listaRestaurantes: Restaurante[] = response.data.flatMap(
-          (categoria) =>
-            categoria.restaurantes.map((rest: any) => ({
-              idRestaurante: rest.idRestaurante,
-              nome: rest.nome,
-              urlImagem: rest.urlImagem,
-              categoria: {
-                id: categoria.id,
-                nome: categoria.nome,
-              },
-            }))
-        );
-
-        setRestaurantes(listaRestaurantes);
+        setRestaurantes(response.data);
       } catch (error) {
         console.error('Erro ao buscar restaurantes:', error);
       } finally {
@@ -79,60 +69,101 @@ export default function Busca() {
     fetchRestaurantes();
   }, []);
 
+  const categorias = useMemo(
+    () => [...new Set(restaurantes.map((r) => r.categoria?.nome).filter(Boolean))],
+    [restaurantes]
+  );
+
   /* =======================
      FILTRO
   ======================= */
-  const restaurantesFiltrados = restaurantes.filter((r) =>
-    r.nome.toLowerCase().includes(search.toLowerCase())
+  const termo = search.trim().toLowerCase();
+  const restaurantesFiltrados = restaurantes.filter(
+    (r) =>
+      (!categoria || r.categoria?.nome === categoria) &&
+      (!termo ||
+        r.nome.toLowerCase().includes(termo) ||
+        r.categoria?.nome?.toLowerCase().includes(termo))
   );
-
-  const screenWidth = Dimensions.get('window').width;
-  const cardWidth = (screenWidth - 30) / 2;
 
   /* =======================
      ITEM
   ======================= */
-  const renderItem = ({ item }: { item: Restaurante }) => (
-    <TouchableOpacity
-      style={[styles.card, { width: cardWidth }]}
-      activeOpacity={0.8}
-      onPress={() =>
-        navigation.navigate('ProdutosRestaurante', {
-          id: item.idRestaurante,
-        })
-      }
-    >
-      <ImageBackground
-        source={{
-          uri: item.urlImagem
-            ? `${API_BASE_URL}${item.urlImagem.replace(/\\/g, '/')}`
-            : 'https://via.placeholder.com/150',
-        }}
-        style={styles.imagemFundo}
-        imageStyle={{ borderRadius: 8 }}
+  const renderItem = ({ item }: { item: Restaurante }) => {
+    const img = imagemUrl(item.urlImagem);
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() =>
+          navigation.navigate('ProdutosRestaurante', {
+            id: item.idRestaurante,
+          })
+        }
       >
-        <View style={styles.overlay}>
-          <Text style={styles.nome}>{item.nome}</Text>
-          <Text style={styles.categoria}>{item.categoria.nome}</Text>
+        {img ? (
+          <Image source={{ uri: img }} style={styles.cardImg} />
+        ) : (
+          <View style={[styles.cardImg, styles.semImagem]}>
+            <Ionicons name="storefront-outline" size={32} color={cores.textoSuave} />
+          </View>
+        )}
+        <View style={styles.cardInfo}>
+          <Text style={styles.nome} numberOfLines={1}>{item.nome}</Text>
+          <Text style={styles.categoria} numberOfLines={1}>
+            {item.categoria?.nome}
+            {item.raio_entrega ? ` • ${item.raio_entrega} km` : ''}
+          </Text>
         </View>
-      </ImageBackground>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   /* =======================
      RENDER
   ======================= */
   return (
-    <View style={styles.container}>
-      <SearchBar
-        placeholder="O que vai pedir hoje?"
-        onChangeText={updateSearch}
-        value={search}
-        containerStyle={styles.searchContainer}
-        inputContainerStyle={styles.inputContainer}
-      />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Text style={styles.titulo}>Buscar</Text>
 
-      <Text style={styles.titulo}>Restaurantes</Text>
+      <View style={styles.busca}>
+        <Ionicons name="search" size={20} color={cores.vermelho} />
+        <TextInput
+          placeholder="O que vai pedir hoje?"
+          placeholderTextColor={cores.textoSuave}
+          onChangeText={setSearch}
+          value={search}
+          style={styles.buscaInput}
+        />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')}>
+            <Ionicons name="close-circle" size={20} color="#C8C8CF" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chips}
+        >
+          {[null, ...categorias].map((c) => {
+            const ativo = categoria === c;
+            return (
+              <TouchableOpacity
+                key={c ?? 'todas'}
+                style={[styles.chip, ativo && styles.chipAtivo]}
+                onPress={() => setCategoria(c as string | null)}
+              >
+                <Text style={[styles.chipTexto, ativo && styles.chipTextoAtivo]}>
+                  {c ?? 'Todas'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <FlatList
         data={restaurantesFiltrados}
@@ -140,16 +171,20 @@ export default function Busca() {
         keyExtractor={(item) => item.idRestaurante.toString()}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          !loading ? (
-            <Text style={{ textAlign: 'center', marginTop: 20 }}>
-              Nenhum restaurante encontrado
-            </Text>
-          ) : null
+          loading ? (
+            <ActivityIndicator color={cores.vermelho} style={{ marginTop: 32 }} />
+          ) : (
+            <View style={styles.vazio}>
+              <Ionicons name="search-outline" size={40} color="#C8C8CF" />
+              <Text style={styles.vazioTexto}>Nenhum restaurante encontrado</Text>
+            </View>
+          )
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -157,55 +192,55 @@ export default function Busca() {
    ESTILOS
 ======================= */
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 10,
-  },
-  searchContainer: {
-    backgroundColor: '#f5f5f5',
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-    paddingHorizontal: 0,
-  },
-  inputContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    height: 46,
-    paddingHorizontal: 10,
-  },
+  container: { flex: 1, backgroundColor: cores.fundo },
   titulo: {
-    marginTop: 20,
-    marginBottom: 10,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '800',
+    color: cores.texto,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
-  row: {
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  card: {
-    height: 120,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  imagemFundo: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  overlay: {
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingVertical: 6,
+  busca: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: cores.superficie,
+    ...sombra,
   },
-  nome: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
+  buscaInput: { flex: 1, fontSize: 15, color: cores.texto, height: '100%' },
+
+  chips: { paddingHorizontal: 16, paddingVertical: 14, gap: 8 },
+  chip: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: cores.superficie,
+    borderWidth: 1,
+    borderColor: cores.borda,
   },
-  categoria: {
-    color: '#fff',
-    fontSize: 12,
+  chipAtivo: { backgroundColor: cores.texto, borderColor: cores.texto },
+  chipTexto: { color: cores.texto, fontWeight: '600', fontSize: 13 },
+  chipTextoAtivo: { color: '#fff' },
+
+  row: { gap: 12, marginBottom: 12 },
+  card: {
+    flex: 1,
+    backgroundColor: cores.superficie,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...sombra,
   },
+  cardImg: { width: '100%', height: 110, backgroundColor: cores.fundo },
+  semImagem: { alignItems: 'center', justifyContent: 'center' },
+  cardInfo: { padding: 12 },
+  nome: { color: cores.texto, fontSize: 15, fontWeight: '700' },
+  categoria: { color: cores.textoSuave, fontSize: 12, marginTop: 2 },
+
+  vazio: { alignItems: 'center', paddingVertical: 48, gap: 8 },
+  vazioTexto: { color: cores.textoSuave, fontSize: 15 },
 });
