@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import { API_BASE_URL } from "./config";
 
 export type Endereco = {
   rua: string;
@@ -39,7 +40,7 @@ export default function EnderecoScreen() {
       setLoading(true);
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
-      const response = await axios.get("http://localhost:8081/endereco", {
+      const response = await axios.get(`${API_BASE_URL}/endereco`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -69,7 +70,7 @@ export default function EnderecoScreen() {
   const salvarEndereco = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      await axios.put("http://localhost:8081/endereco/editar", endereco, {
+      await axios.put(`${API_BASE_URL}/endereco/editar`, endereco, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert("Sucesso", "Endereço salvo com sucesso!");
@@ -84,7 +85,7 @@ export default function EnderecoScreen() {
   const excluirEndereco = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
-      await axios.delete("http://localhost:8081/endereco/excluir", {
+      await axios.delete(`${API_BASE_URL}/endereco/excluir`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       Alert.alert("Endereço excluído!");
