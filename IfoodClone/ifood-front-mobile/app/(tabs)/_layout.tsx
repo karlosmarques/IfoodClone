@@ -1,52 +1,53 @@
-import { Tabs, useNavigation } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { Icon } from '@rneui/themed';
 import { HapticTab } from '@/components/haptic-tab';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { cores } from '@/constants/ui';
 
+type NomeIcone = React.ComponentProps<typeof Ionicons>['name'];
+
+function icone(ativo: NomeIcone, inativo: NomeIcone) {
+  function TabIcon({ color, focused }: { color: string; focused: boolean }) {
+    return <Ionicons name={focused ? ativo : inativo} color={color} size={24} />;
+  }
+  return TabIcon;
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
-    
-        <Tabs
-          screenOptions={{
-            headerShown: false,
-            tabBarButton: HapticTab,
-            tabBarActiveTintColor: "#000000ff",
-            tabBarInactiveTintColor: "#666666",
-            tabBarStyle: { display: 'flex' }, // visível após Splash
-          }}
-        >
-          <Tabs.Screen
-            name="index"
-            options={{
-              title: 'Home',
-              tabBarIcon: ({ color }) => <Icon name="home" type="material" color={color} size={26} />,
-            }}
-          />
-          <Tabs.Screen
-            name="busca"
-            options={{
-              title: 'Busca',
-              tabBarIcon: ({ color }) => <Icon name="search" type="feather" color={color} size={26} />,
-            }}
-          />
-          <Tabs.Screen
-            name="perfil"
-            options={{
-              title: 'Perfil',
-              tabBarIcon: ({ color }) => <Icon name="user" type="font-awesome" color={color} size={26} />,
-            }}
-          />
-          <Tabs.Screen
-            name="pedidos"
-            options={{
-              title: 'Pedidos',
-              tabBarIcon: ({ color }) => <Icon name="newspaper" type="material" color={color} size={26} />,
-            }}
-          />
-        </Tabs>
-      )}
-    
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarButton: HapticTab,
+        tabBarActiveTintColor: cores.vermelho,
+        tabBarInactiveTintColor: '#8A8A93',
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarStyle: {
+          display: 'flex', // visível após Splash
+          backgroundColor: cores.superficie,
+          borderTopColor: cores.borda,
+          height: 64,
+          paddingTop: 6,
+          paddingBottom: 8,
+        },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{ title: 'Início', tabBarIcon: icone('home', 'home-outline') }}
+      />
+      <Tabs.Screen
+        name="busca"
+        options={{ title: 'Busca', tabBarIcon: icone('search', 'search-outline') }}
+      />
+      <Tabs.Screen
+        name="pedidos"
+        options={{ title: 'Pedidos', tabBarIcon: icone('receipt', 'receipt-outline') }}
+      />
+      <Tabs.Screen
+        name="perfil"
+        options={{ title: 'Perfil', tabBarIcon: icone('person', 'person-outline') }}
+      />
+    </Tabs>
+  );
+}
