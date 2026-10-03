@@ -1,25 +1,8 @@
 import axios from "axios";
-import { useState } from "react";
-import { Button, Card, Col, Container, Form, Row } from "react-bootstrap";
-
-  const styles = {
-  label: {
-    marginBottom: 6,
-    display: "block",
-  },
-    input: {
-    width: "100%",
-    padding: 13,
-    marginBottom: 15,
-    border: "1px solid #dee2e6",
-    borderRadius: 10,
-    fontSize: 15,
-    transition: "0.3s",
-  },
-
-  }
-
-
+import { useEffect, useState } from "react";
+import { Form } from "react-bootstrap";
+import { Link } from "react-router-dom";
+import { API_URL, authHeaders, formatarPreco } from "../../componentes/painel";
 
 export default function ProdutoNovo() {
   const [nome, setNome] = useState("");
@@ -28,207 +11,233 @@ export default function ProdutoNovo() {
   const [categoria, setCategoria] = useState("");
   const [ativo, setAtivo] = useState(true);
   const [imagem, setImagem] = useState(null);
-  
+  const [preview, setPreview] = useState(null);
+  const [enviando, setEnviando] = useState(false);
 
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
-  const token = localStorage.getItem("token");
+  // Gera a prévia da imagem escolhida
+  useEffect(() => {
+    if (!imagem) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(imagem);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [imagem]);
 
   // ------------------------------------------
   // CADASTRAR PRODUTO
   // ------------------------------------------
-async function cadastrarProduto(e) {
-  e.preventDefault();
-  setErro("");
-  setSucesso("");
+  async function cadastrarProduto(e) {
+    e.preventDefault();
+    setErro("");
+    setSucesso("");
 
-  // validações
-  if (!nome || !descricao || !preco || !categoria)
-    return setErro("Preencha todos os campos!");
+    // validações
+    if (!nome || !descricao || !preco || !categoria)
+      return setErro("Preencha todos os campos!");
 
-  if (!imagem)
-    return setErro("Envie uma imagem do produto!");
+    if (!imagem)
+      return setErro("Envie uma imagem do produto!");
 
-  try {
-    const dados = {
-      nome,
-      descricao,
-      preco: parseFloat(preco),
-      categoria,
-      ativo,
-    };
+    try {
+      setEnviando(true);
 
-    const formData = new FormData();
-    formData.append("dados", new Blob([JSON.stringify(dados)], { type: "application/json" }));
-    formData.append("imagem", imagem);
+      const dados = {
+        nome,
+        descricao,
+        preco: parseFloat(preco),
+        categoria,
+        ativo,
+      };
 
-    const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("dados", new Blob([JSON.stringify(dados)], { type: "application/json" }));
+      formData.append("imagem", imagem);
 
-    await axios.post("http://localhost:8081/produtos/criar", formData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
+      await axios.post(`${API_URL}/produtos/criar`, formData, {
+        headers: {
+          ...authHeaders(),
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    setSucesso("Produto cadastrado com sucesso!");
+      setSucesso(`"${nome}" foi adicionado ao cardápio!`);
 
-    // limpa os campos
-    setNome("");
-    setDescricao("");
-    setPreco("");
-    setCategoria("");
-    setAtivo(true);
-    setImagem(null);
-
-  } catch (e) {
-    console.error(e);
-    setErro(e.response?.data?.message || "Erro ao cadastrar produto.");
+      // limpa os campos
+      setNome("");
+      setDescricao("");
+      setPreco("");
+      setCategoria("");
+      setAtivo(true);
+      setImagem(null);
+    } catch (e) {
+      console.error(e);
+      setErro(e.response?.data?.message || "Erro ao cadastrar produto.");
+    } finally {
+      setEnviando(false);
+    }
   }
-}
 
   return (
-  <Container className="mt-5 mb-5">
-    <Row className="justify-content-center">
-      <Col lg={8}>
-        {/* HEADER */}
-        <Card className="border-0 shadow rounded-4 mb-4">
-          <Card.Body className="p-4">
-            <h2 className="fw-bold text-danger mb-1">
-              Cadastrar Novo Produto
-            </h2>
-            <p className="text-muted mb-0">
-              Adicione um novo item ao seu cardápio
-            </p>
-          </Card.Body>
-        </Card>
+    <>
+      <div className="pn-header">
+        <div>
+          <h1>Cadastrar produto</h1>
+          <p>Adicione um novo item ao seu cardápio</p>
+        </div>
+        <Link to="/produtos/cardapio" className="pn-btn pn-btn-ghost">
+          <i className="bi bi-journal-text" /> Ver cardápio
+        </Link>
+      </div>
 
+      <div className="pn-form-layout">
         {/* FORMULÁRIO */}
-        <Card className="border-0 shadow rounded-4">
-          <Card.Body className="p-4">
-            {erro && (
-              <div className="alert alert-danger rounded-3">
-                {erro}
-              </div>
-            )}
-            {sucesso && (
-              <div className="alert alert-success rounded-3">
-                {sucesso}
-              </div>
-            )}
+        <div className="pn-card pn-card-pad">
+          {erro && (
+            <div className="pn-alert error">
+              <i className="bi bi-exclamation-circle" /> {erro}
+            </div>
+          )}
+          {sucesso && (
+            <div className="pn-alert success">
+              <i className="bi bi-check-circle" /> {sucesso}
+            </div>
+          )}
 
-            <Form onSubmit={cadastrarProduto}>
-              {/* IMAGEM */}
-              <Form.Group className="mb-4">
-                <Form.Label className="fw-semibold">
-                  Imagem do Produto
-                </Form.Label>
+          <Form onSubmit={cadastrarProduto}>
+            {/* IMAGEM */}
+            <label className="pn-label">Foto do produto</label>
+            <label className="pn-dropzone mb-4">
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => setImagem(e.target.files[0] || null)}
+              />
+              <i className="bi bi-cloud-arrow-up" />
+              {imagem ? (
+                <>
+                  <strong>{imagem.name}</strong>
+                  <div className="small">Clique para trocar</div>
+                </>
+              ) : (
+                <>
+                  <strong>Clique para enviar uma imagem</strong>
+                  <div className="small">JPG, PNG ou WEBP em boa resolução</div>
+                </>
+              )}
+            </label>
+
+            <div className="row">
+              <div className="col-md-7 mb-3">
+                <label className="pn-label">Nome do produto</label>
                 <Form.Control
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImagem(e.target.files[0])}
-                  className="rounded-3"
+                  type="text"
+                  placeholder="Ex: X-Burger"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
                 />
-                <Form.Text className="text-muted">
-                  Utilize imagens em boa resolução
-                </Form.Text>
-              </Form.Group>
+              </div>
 
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold">
-                      Nome do Produto
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Ex: X-Burger"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      className="rounded-3"
-                    />
-                  </Form.Group>
-                </Col>
-
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold">
-                      Categoria
-                    </Form.Label>
-                    <Form.Control
-                      type="text"
-                      placeholder="Lanche, Bebida, Sobremesa..."
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value)}
-                      className="rounded-3"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Form.Group className="mb-3">
-                <Form.Label className="fw-semibold">
-                  Descrição
-                </Form.Label>
+              <div className="col-md-5 mb-3">
+                <label className="pn-label">Categoria</label>
                 <Form.Control
-                  as="textarea"
-                  rows={3}
-                  placeholder="Descreva o produto"
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  className="rounded-3"
+                  type="text"
+                  placeholder="Lanches, Bebidas..."
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
                 />
-              </Form.Group>
+              </div>
+            </div>
 
-              <Row>
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold">
-                      Preço
-                    </Form.Label>
-                    <Form.Control
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={preco}
-                      onChange={(e) => setPreco(e.target.value)}
-                      className="rounded-3"
-                    />
-                  </Form.Group>
-                </Col>
+            <div className="mb-3">
+              <label className="pn-label">Descrição</label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                placeholder="Ingredientes, tamanho, acompanhamentos..."
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+              />
+            </div>
 
-                <Col md={6}>
-                  <Form.Group className="mb-3">
-                    <Form.Label className="fw-semibold">
-                      Status
-                    </Form.Label>
-                    <Form.Select
-                      value={ativo}
-                      onChange={(e) =>
-                        setAtivo(e.target.value === "true")
-                      }
-                      className="rounded-3"
-                    >
-                      <option value="true">Ativo</option>
-                      <option value="false">Desativado</option>
-                    </Form.Select>
-                  </Form.Group>
-                </Col>
-              </Row>
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="pn-label">Preço (R$)</label>
+                <Form.Control
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0,00"
+                  value={preco}
+                  onChange={(e) => setPreco(e.target.value)}
+                />
+              </div>
 
-              <Button
-                variant="danger"
-                type="submit"
-                className="w-100 rounded-pill py-2 fw-bold mt-3"
-              >
-                Salvar Produto
-              </Button>
-            </Form>
-          </Card.Body>
-        </Card>
-      </Col>
-    </Row>
-  </Container>
-);
+              <div className="col-md-6 mb-3">
+                <label className="pn-label">Disponibilidade</label>
+                <div className="pn-segmented">
+                  <button
+                    type="button"
+                    className={ativo ? "active" : ""}
+                    onClick={() => setAtivo(true)}
+                  >
+                    Ativo
+                  </button>
+                  <button
+                    type="button"
+                    className={!ativo ? "active" : ""}
+                    onClick={() => setAtivo(false)}
+                  >
+                    Pausado
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="pn-btn pn-btn-primary w-100 mt-2 py-3"
+              disabled={enviando}
+            >
+              {enviando ? "Salvando..." : "Salvar produto"}
+            </button>
+          </Form>
+        </div>
+
+        {/* PRÉVIA */}
+        <div className="pn-sticky">
+          <div className="pn-label mb-2">Prévia no cardápio</div>
+          <div className={`pn-card pn-product ${ativo ? "" : "inativo"}`}>
+            <div className="pn-product-img">
+              {preview ? (
+                <img src={preview} alt="Prévia" />
+              ) : (
+                <div className="pn-img-placeholder">
+                  <i className="bi bi-image" />
+                </div>
+              )}
+              <span className={`pn-badge pn-tone-${ativo ? "green" : "gray"}`}>
+                {ativo ? "Ativo" : "Pausado"}
+              </span>
+            </div>
+            <div className="pn-product-body">
+              <div className="pn-product-cat">{categoria || "Categoria"}</div>
+              <div className="pn-product-name">{nome || "Nome do produto"}</div>
+              <div className="pn-product-desc">
+                {descricao || "A descrição do produto aparece aqui."}
+              </div>
+              <div className="pn-product-foot">
+                <span className="pn-price">{formatarPreco(preco)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }
