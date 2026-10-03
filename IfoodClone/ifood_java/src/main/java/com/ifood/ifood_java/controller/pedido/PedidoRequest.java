@@ -18,6 +18,9 @@ public class PedidoRequest {
 
     private Long idRestaurante;
 
+    // PIX, CARTAO ou DINHEIRO
+    private String metodoPagamento;
+
     private List<ItemRequest> itens;
 
     @Data

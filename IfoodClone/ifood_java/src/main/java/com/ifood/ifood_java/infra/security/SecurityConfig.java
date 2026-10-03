@@ -42,6 +42,7 @@ public class SecurityConfig {
                     .requestMatchers("/pedidos/**").permitAll()
                     .requestMatchers("/uploads/**").permitAll()
                     .requestMatchers("/endereco/**").permitAll()
+                    .requestMatchers("/pagamentos/webhook").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
